@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Assistant</title>
+    <style>
+        :root {
+            --bg: #10100d;
+            --accent: #f59e0b;
+            --accent2: #f97316;
+            --panel: rgba(255,255,255,.06);
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; color: var(--text);
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+            background:
+                radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 32%),
+                radial-gradient(circle at 85% 80%, color-mix(in srgb, var(--accent2) 16%, transparent), transparent 34%),
+                var(--bg);
+            display: grid; place-items: center; padding: 20px;
+        }
+        .shell {
+            width: min(100%, 980px); height: min(88vh, 760px);
+            display: grid; grid-template-rows: auto 1fr auto;
+            background: rgba(8, 12, 20, .72); border: 1px solid rgba(255,255,255,.12);
+            border-radius: 28px; overflow: hidden; backdrop-filter: blur(18px);
+            box-shadow: 0 25px 80px rgba(0,0,0,.4);
+        }
+        header {
+            padding: 22px 26px; display: flex; align-items: center; gap: 16px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+        .orb {
+            width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #08100c; font-weight: 900; box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 30%, transparent);
+        }
+        h1 { margin: 0; font-size: 1.12rem; letter-spacing: .02em; }
+        .status { margin-top: 4px; color: var(--muted); font-size: .82rem; }
+        .chat { padding: 26px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .message { max-width: 78%; padding: 14px 17px; border-radius: 18px; line-height: 1.55; white-space: pre-wrap; }
+        .bot { align-self: flex-start; background: var(--panel); border: 1px solid rgba(255,255,255,.08); }
+        .user { align-self: flex-end; background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #07110c; font-weight: 600; }
+        .welcome { margin: auto; text-align: center; max-width: 520px; color: var(--muted); }
+        .welcome strong { display: block; color: var(--text); font-size: 1.5rem; margin-bottom: 8px; }
+        form { padding: 18px; border-top: 1px solid rgba(255,255,255,.08); display: flex; gap: 10px; }
+        textarea {
+            flex: 1; resize: none; min-height: 54px; max-height: 130px; border: 1px solid rgba(255,255,255,.12);
+            border-radius: 17px; padding: 15px; background: rgba(255,255,255,.05); color: var(--text);
+            outline: none; font: inherit;
+        }
+        textarea:focus { border-color: var(--accent); }
+        button {
+            width: 56px; border: 0; border-radius: 17px; cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent2)); font-size: 1.1rem;
+        }
+        @media (max-width: 650px) {
+            .shell { height: 94vh; border-radius: 20px; }
+            .message { max-width: 88%; }
+            .chat { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <header>
+            <div class="orb">S</div>
+            <div>
+                <h1>SQL Assistant</h1>
+                <div class="status">Gemini • Study-focused assistant</div>
+            </div>
+        </header>
+
+        <section class="chat" id="chat">
+            <div class="welcome" id="welcome">
+                <strong>SQL Assistant</strong>
+                Ask me anything related to SQL and database.
+            </div>
+        </section>
+
+        <form id="chatForm">
+            <textarea id="message" placeholder="Type your study question..." rows="1"></textarea>
+            <button type="submit" aria-label="Send">➤</button>
+        </form>
+    </main>
+
+    <script>
+        const form = document.getElementById("chatForm");
+        const input = document.getElementById("message");
+        const chat = document.getElementById("chat");
+        const welcome = document.getElementById("welcome");
+
+        function addMessage(text, type) {
+            if (welcome) welcome.remove();
+            const div = document.createElement("div");
+            div.className = "message " + type;
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+            return div;
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, "user");
+            input.value = "";
+
+            const loading = addMessage("Thinking...", "bot");
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+                loading.textContent = data.reply || "No response received.";
+            } catch (error) {
+                loading.textContent = "Unable to connect to the chatbot.";
+            }
+            chat.scrollTop = chat.scrollHeight;
+        });
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+    </script>
+</body>
+</html>
